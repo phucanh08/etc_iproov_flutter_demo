@@ -5,6 +5,7 @@ mixin HomeController on State<MyHomePage> {
 
   var assuranceType = AssuranceType.genuinePresenceAssurance;
   var claimType = ClaimType.enrol;
+  var camera = Camera.front;
   final userIdController = TextEditingController(text: "ETC-Anhlp-1");
 
   var flagTime = 0;
@@ -52,16 +53,29 @@ mixin HomeController on State<MyHomePage> {
     }
 
     // TODO: Customize your options here
-    const options = Options();
+    final options = Options(
+      camera: camera,
+      disableExteriorEffects: true,
+      orientation: Orientation.reversePortrait,
+      enableScreenshots: true,
+      filter: const NaturalFilter(style: NaturalFilterStyle.clear),
+      // filter: const LineDrawingFilter(
+      //     style: LineDrawingFilterStyle.shaded,
+      //     foregroundColor: Colors.black,
+      //     backgroundColor: Colors.white
+      // ),
+    );
 
     _launchIProov(token, options, userId);
   }
+
+  StreamSubscription? subscription;
 
   void _launchIProov(String token, Options options, String userId) {
     final stream = IProov.launch(
         streamingUrl: 'wss://$hostname/ws', token: token, options: options);
 
-    stream.listen((event) {
+    subscription = stream.listen((event) {
       if (event.isFinal) {
         setState(() => _scanInProgress = false);
       }
@@ -85,12 +99,17 @@ mixin HomeController on State<MyHomePage> {
       } else if (event is IProovEventError) {
         ProgressHud.showAndDismiss(ProgressHudType.error, event.error.title);
       }
+
+
     });
   }
 
-  Future<void> getValidateInfo({required String token, required String userId}) async {
+  Future<void> getValidateInfo(
+      {required String token, required String userId}) async {
     await _apiClient.validate(token: token, userId: userId);
-    print("Time-------------------------: ${DateTime.now().millisecondsSinceEpoch - flagTime}");
+    print(
+        "Time-------------------------: ${DateTime.now().millisecondsSinceEpoch - flagTime}");
+    subscription?.cancel();
   }
 
   @override
